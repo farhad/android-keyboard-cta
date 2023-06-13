@@ -1,13 +1,14 @@
 package keyboard.cta
 
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.LayoutInflater
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.WindowCompat
 import android.view.View
 import android.view.ViewGroup
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.WindowCompat
 import androidx.recyclerview.widget.DiffUtil
-import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -16,10 +17,10 @@ import keyboard.cta.databinding.ItemOneBinding
 import keyboard.cta.databinding.ItemThreeBinding
 import keyboard.cta.databinding.ItemTwoBinding
 
+
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private var adapter = MyAdapter()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -32,15 +33,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setUpLayout() {
+        val adapter = MyAdapter(binding)
         binding.recyclerview.apply {
             layoutManager = LinearLayoutManager(this@MainActivity, RecyclerView.VERTICAL, false)
             isNestedScrollingEnabled = true
         }
         binding.recyclerview.adapter = adapter
-    }
 
-    override fun onResume() {
-        super.onResume()
         val list = listOf(
             GeneralDataItem(type = ViewType.ONE),
             GeneralDataItem(type = ViewType.ONE),
@@ -51,93 +50,115 @@ class MainActivity : AppCompatActivity() {
             GeneralDataItem(type = ViewType.THREE),
             GeneralDataItem(type = ViewType.ONE),
             GeneralDataItem(type = ViewType.THREE),
-            GeneralDataItem(type = ViewType.TWO, showCta = false),
+            GeneralDataItem(type = ViewType.TWO, showCta = true),
+            GeneralDataItem(type = ViewType.THREE),
+            GeneralDataItem(type = ViewType.ONE),
+            GeneralDataItem(type = ViewType.ONE),
             GeneralDataItem(type = ViewType.THREE),
             GeneralDataItem(type = ViewType.ONE),
             GeneralDataItem(type = ViewType.ONE)
         )
 
         adapter.submitList(list)
+
     }
 
-}
+    class MyAdapter(val activityMainBinding: ActivityMainBinding) : ListAdapter<GeneralDataItem, MyAdapter.GeneralViewHolder>(ItemDiffUtil) {
+        companion object {
+            private object ItemDiffUtil : DiffUtil.ItemCallback<GeneralDataItem>() {
+                override fun areItemsTheSame(oldItem: GeneralDataItem, newItem: GeneralDataItem): Boolean {
+                    return oldItem == newItem
+                }
 
-
-
-data class GeneralDataItem(val showCta: Boolean = false, val type: ViewType)
-
-class MyAdapter : ListAdapter<GeneralDataItem,GeneralViewHolder>(ItemDiffUtil) {
-    companion object {
-        private object ItemDiffUtil : DiffUtil.ItemCallback<GeneralDataItem>() {
-            override fun areItemsTheSame(oldItem: GeneralDataItem, newItem: GeneralDataItem): Boolean {
-                return oldItem == newItem
-            }
-
-            override fun areContentsTheSame(oldItem: GeneralDataItem, newItem: GeneralDataItem): Boolean {
-                return oldItem == newItem
+                override fun areContentsTheSame(oldItem: GeneralDataItem, newItem: GeneralDataItem): Boolean {
+                    return oldItem == newItem
+                }
             }
         }
-    }
 
-    override fun getItemCount(): Int = currentList.size
+        override fun getItemCount(): Int = currentList.size
 
-    override fun getItemViewType(position: Int): Int = currentList[position].type.ordinal
+        override fun getItemViewType(position: Int): Int = currentList[position].type.ordinal
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): GeneralViewHolder {
-        return when(ViewType.from(viewType)) {
-            ViewType.ONE -> {
-                ItemOneViewHolder(ItemOneBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): GeneralViewHolder {
+            return when (ViewType.from(viewType)) {
+                ViewType.ONE -> {
+                    ItemOneViewHolder(ItemOneBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+                }
+
+                ViewType.TWO -> {
+                    ItemTwoViewHolder(ItemTwoBinding.inflate(LayoutInflater.from(parent.context), parent, false), activityMainBinding)
+                }
+
+                ViewType.THREE -> {
+                    ItemThreeViewHolder(ItemThreeBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+
+                }
             }
+        }
 
-            ViewType.TWO -> {
-                ItemTwoViewHolder(ItemTwoBinding.inflate(LayoutInflater.from(parent.context), parent, false))
-            }
+        override fun onBindViewHolder(holder: GeneralViewHolder, position: Int) {
+            holder.bind(currentList[holder.adapterPosition])
+        }
 
-            ViewType.THREE -> {
-                ItemThreeViewHolder(ItemThreeBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+        abstract class GeneralViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+            abstract fun bind(item: GeneralDataItem)
+        }
+
+
+        class ItemOneViewHolder(val binding: ItemOneBinding) : GeneralViewHolder(binding.root) {
+            override fun bind(item: GeneralDataItem) {
 
             }
         }
-    }
 
-    override fun onBindViewHolder(holder: GeneralViewHolder, position: Int) {
-        holder.bind(currentList[holder.adapterPosition])
-    }
-}
+        inner class ItemTwoViewHolder(val binding: ItemTwoBinding, val activityMainBinding: ActivityMainBinding) :
+            GeneralViewHolder(binding.root) {
+            override fun bind(item: GeneralDataItem) {
+                binding.chipCta.setOnClickListener {
+                    binding.etAmount.setText("4200.56")
+                    binding.chipCta.visibility = View.GONE
+                }
 
-enum class ViewType {
-    ONE,
-    TWO,
-    THREE;
+                binding.etAmount.setOnFocusChangeListener { _, b ->
+                    if (item.showCta && b) {
+                        binding.chipCta.visibility = View.VISIBLE
+                        Handler(Looper.getMainLooper()).postDelayed(
+                            {
+                                //Take care with this line I think that the scroll moves in px and not with dp.
+                                activityMainBinding.recyclerview.scrollBy(0, 160)
+                            },
+                            300
+                        ) //You need to play with the time if your activity comes from onCreate and onResume you need to change this value to 1000.
+                    }
+                }
 
-    companion object {
-        fun from(value: Int): ViewType {
-            return values()[value]
+                binding.etQuantity.setOnFocusChangeListener { _, b ->
+                    binding.chipCta.visibility = View.GONE
+                }
+            }
         }
-    }
-}
 
+        class ItemThreeViewHolder(val binding: ItemThreeBinding) : MyAdapter.GeneralViewHolder(binding.root) {
+            override fun bind(item: GeneralDataItem) {
 
-abstract class GeneralViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-    abstract fun bind(item: GeneralDataItem)
-}
-
-
-class ItemOneViewHolder(val binding: ItemOneBinding) : GeneralViewHolder(binding.root) {
-    override fun bind(item: GeneralDataItem) {
+            }
+        }
 
     }
-}
 
-class ItemTwoViewHolder(val binding: ItemTwoBinding) : GeneralViewHolder(binding.root) {
 
-    override fun bind(item: GeneralDataItem) {
-        binding.chipCta.visibility = if (item.showCta) View.VISIBLE else View.GONE
-    }
-}
+    data class GeneralDataItem(val showCta: Boolean = false, val type: ViewType)
 
-class ItemThreeViewHolder(val binding: ItemThreeBinding) : GeneralViewHolder(binding.root) {
-    override fun bind(item: GeneralDataItem) {
+    enum class ViewType {
+        ONE,
+        TWO,
+        THREE;
 
+        companion object {
+            fun from(value: Int): ViewType {
+                return values()[value]
+            }
+        }
     }
 }
