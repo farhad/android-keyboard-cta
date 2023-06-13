@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="gray">#EEEEEE</color>
+    <color name="card_bg_one">#FFF</color>
+    <color name="card_bg_two">#DCEDC8</color>
+    <color name="calc_bg">#AED581</color>
+</resources>
